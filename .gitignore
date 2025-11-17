@@ -69,4 +69,4 @@ node_modules/
 .dataconnect
 
 #keys and secret
-.accountsecret
+accountsecret.json
