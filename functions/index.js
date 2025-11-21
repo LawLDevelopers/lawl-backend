@@ -1,3 +1,12 @@
 exports.createAdmin = require("./src/auth/createAdmin").createAdmin;
 exports.resetPassword = require("./src/auth/resetPassword").resetPassword;
 exports.getAdminRole = require("./src/auth/getAdminRole").getAdminRole;
+exports.getUserRole = require("./src/auth/getUserRole").getUserRole;
+exports.sendOtp = require("./src/auth/sendOtp").sendOtp;
+exports.verifyOtp = require("./src/auth/verifyOtp").verifyOtp;
+exports.assignUserRole = require("./src/auth/assignUserRole").assignUserRole;
+exports.checkOnboardingStatus = require("./src/auth/checkOnboardingStatus").checkOnboardingStatus;
+exports.registerUser = require("./src/auth/registerUser").registerUser;
+exports.completeSignup = require("./src/auth/completeSignup").completeSignup;
+exports.updateUserProfile = require("./src/auth/updateUserProfile").updateUserProfile;
+exports.resendOtp = require("./src/auth/resendOtp").resendOtp;
