@@ -1,4 +1,4 @@
-const {admin, functions} = require("../utils/firebase");
+const {admin, functions} = require("../../utils/firebase");
 
 const updateLawyerRates = functions.https.onCall(async (data, context) => {
   if (!context.auth) {
