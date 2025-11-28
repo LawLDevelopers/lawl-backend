@@ -1,5 +1,5 @@
-const {admin, functions} = require("../utils/firebase");
-const {assertSuperAdmin} = require("../utils/roleUtils");
+const {admin, functions} = require("../../utils/firebase");
+const {assertSuperAdmin} = require("../../utils/roleUtils");
 
 const createAdmin = functions.https.onCall(async (data, context) => {
   if (!context.auth) {
