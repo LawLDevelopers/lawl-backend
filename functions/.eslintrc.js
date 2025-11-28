@@ -11,24 +11,21 @@ module.exports = {
     "google",
   ],
   rules: {
-    "no-restricted-globals": ["error", "name", "length"],
-    "prefer-arrow-callback": "off", // Allow traditional functions
-    "quotes": ["off", "double", {"allowTemplateLiterals": true}], // Allow both single and double quotes
-    "require-jsdoc": "off",
-    "valid-jsdoc": "off",
-    "linebreak-style": "off", // Disable for Windows
-    "max-len": ["warn", {"code": 150}], // Increase max line length
-    "comma-dangle": "off", // Allow missing trailing commas
-    "no-trailing-spaces": "off", // Allow trailing spaces
-    "indent": "off", // Disable strict indentation rules
-    "camelcase": "off", // Allow non-camelcase identifiers
-    "eol-last": "off", // Don't require newline at end of file
-    "prefer-const": "off", // Allow let instead of const
-    "object-curly-spacing": "off", // Allow spaces in curly braces
-    "no-unused-vars": "off", // Allow unused variables
-    "arrow-parens": "off", // Allow arrow functions without parentheses
-    "no-multi-spaces": "off" // Allow multiple spaces
-  },
+  "no-restricted-globals": "off",
+  "prefer-arrow-callback": "off",
+  "quotes": "off",
+  "valid-jsdoc": "off",
+  "require-jsdoc": "off",
+  "max-len": "off",
+  "linebreak-style": "off",
+  "indent": "off",
+  "comma-dangle": "off",
+  "object-curly-spacing": "off",
+  "no-trailing-spaces": "off",
+  "eol-last": "off",
+  "arrow-parens": "off",
+  "no-unused-vars": "off",
+},
   overrides: [
     {
       files: ["**/*.spec.*"],

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Agora Test Client A</title>
+</head>
+<body>
+<h2>Client A (AUTO JOIN)</h2>
+<video id="localVideo" autoplay playsinline style="width:300px; border:1px solid #000"></video>
+<div id="remoteContainer"></div>
+
+<script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
+<script>
+  const baseUrl = prompt("Enter /getAgoraToken base URL (e.g. https://us-central1-YOUR-PROJECT.cloudfunctions.net/getAgoraToken)");
+  const channelName = prompt("Enter channel name to join (same for A & B):");
+  const uid = "clientA_" + Math.random().toString(36).slice(2,8);
+
+  async function getToken() {
+    const res = await fetch(baseUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channelName, uid })
+    });
+    return res.json();
+  }
+
+  async function start() {
+    const tokenData = await getToken();
+
+    const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+    await client.join(tokenData.appId, channelName, tokenData.token, uid);
+
+    const localVideoTrack = await AgoraRTC.createCameraVideoTrack();
+    localVideoTrack.play("localVideo");
+
+    await client.publish([localVideoTrack]);
+
+    client.on("user-published", async (user, mediaType) => {
+      await client.subscribe(user, mediaType);
+      if (mediaType === "video") {
+        const remoteVideo = document.createElement("video");
+        remoteVideo.autoplay = true;
+        remoteVideo.playsinline = true;
+        remoteVideo.style.width = "300px";
+        remoteVideo.style.border = "1px solid #000";
+        document.getElementById("remoteContainer").appendChild(remoteVideo);
+        user.videoTrack.play(remoteVideo);
+      }
+    });
+  }
+
+  start();
+</script>
+</body>
+</html>
