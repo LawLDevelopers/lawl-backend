@@ -7,6 +7,7 @@ if (!admin.apps.length) admin.initializeApp();
 
 // POST /createCall
 exports.createCall = onRequest(async (req, res) => {
+  cors(req, res, async () => {
   try {
     if (req.method !== "POST") {
       return res.status(405).json({ error: "Only POST allowed" });
@@ -32,10 +33,12 @@ exports.createCall = onRequest(async (req, res) => {
     console.error("createCall error", err);
     return res.status(500).json({ error: err.message });
   }
+  });
 });
 
 // POST /endCall
 exports.endCall = onRequest(async (req, res) => {
+  cors(req, res, async () => {
   try {
     if (req.method !== "POST") {
       return res.status(405).json({ error: "Only POST allowed" });
@@ -52,10 +55,12 @@ exports.endCall = onRequest(async (req, res) => {
     console.error("endCall error", err);
     return res.status(500).json({ error: err.message });
   }
+  });
 });
 
 // GET /getCall?callId=123
 exports.getCall = onRequest(async (req, res) => {
+  cors(req, res, async () => {
   try {
     const callId = req.query.callId;
     if (!callId) {
@@ -72,4 +77,5 @@ exports.getCall = onRequest(async (req, res) => {
     console.error("getCall error", err);
     return res.status(500).json({ error: err.message });
   }
+  });
 });

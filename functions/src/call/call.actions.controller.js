@@ -2,6 +2,7 @@
 
 const { onRequest } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
+const cors = require("cors")({ origin: true });
 if (!admin.apps.length) admin.initializeApp();
 
 const {
@@ -20,69 +21,74 @@ const {
  *   "channelName": "optional_custom_channel"
  * }
  */
-exports.initiateCall = onRequest(async (req, res) => {
-  try {
-    if (req.method !== "POST") return res.status(405).json({ error: "Only POST allowed" });
+exports.initiateCall = onRequest((req, res) => {
+  cors(req, res, async () => {
+    try {
+      if (req.method !== "POST") return res.status(405).json({ error: "Only POST allowed" });
 
-    const { callerUid, receiverUid, callType = "audio", channelName } = req.body || {};
-    if (!callerUid || !receiverUid) {
-      return res.status(400).json({ error: "callerUid and receiverUid are required" });
+      const { callerUid, receiverUid, callType = "audio", channelName } = req.body || {};
+      if (!callerUid || !receiverUid) {
+        return res.status(400).json({ error: "callerUid and receiverUid are required" });
+      }
+
+      const ch = channelName || `call_${Math.random().toString(36).slice(2, 9)}`;
+
+      const created = await createRingingCall({
+        channelName: ch,
+        callType,
+        callerUid,
+        receiverUid,
+        participants: [callerUid, receiverUid]
+      });
+
+      return res.json({
+        success: true,
+        callId: created.id,
+        call: created.data
+      });
+    } catch (err) {
+      console.error("initiateCall error", err);
+      return res.status(500).json({ error: err.message || String(err) });
     }
-
-    const ch = channelName || `call_${Math.random().toString(36).slice(2, 9)}`;
-
-    const created = await createRingingCall({
-      channelName: ch,
-      callType,
-      callerUid,
-      receiverUid,
-      participants: [callerUid, receiverUid]
-    });
-
-    return res.json({
-      success: true,
-      callId: created.id,
-      call: created.data
-    });
-  } catch (err) {
-    console.error("initiateCall error", err);
-    return res.status(500).json({ error: err.message || String(err) });
-  }
+  });
 });
+
 
 /**
  * POST /acceptCall
  * body: { callId, accepterUid }
  */
 exports.acceptCall = onRequest(async (req, res) => {
-  try {
-    if (req.method !== "POST") return res.status(405).json({ error: "Only POST allowed" });
+  cors(req, res, async () => {
+    try {
+      if (req.method !== "POST") return res.status(405).json({ error: "Only POST allowed" });
 
-    const { callId, accepterUid } = req.body || {};
-    if (!callId || !accepterUid) return res.status(400).json({ error: "callId and accepterUid required" });
+      const { callId, accepterUid } = req.body || {};
+      if (!callId || !accepterUid) return res.status(400).json({ error: "callId and accepterUid required" });
 
-    const existing = await getCall(callId);
-    if (!existing) return res.status(404).json({ error: "Call not found" });
+      const existing = await getCall(callId);
+      if (!existing) return res.status(404).json({ error: "Call not found" });
 
-    // Only allow accepting from the receiver (or allow caller to accept for testing)
-    if (existing.data.receiverUid && existing.data.receiverUid !== accepterUid && existing.data.callerUid !== accepterUid) {
-      // allow caller for special flows, otherwise require receiver to accept
-      // you can tweak this policy as needed
-      return res.status(403).json({ error: "Only receiver or caller can accept the call" });
+      // Only allow accepting from the receiver (or allow caller to accept for testing)
+      if (existing.data.receiverUid && existing.data.receiverUid !== accepterUid && existing.data.callerUid !== accepterUid) {
+        // allow caller for special flows, otherwise require receiver to accept
+        // you can tweak this policy as needed
+        return res.status(403).json({ error: "Only receiver or caller can accept the call" });
+      }
+
+      const patch = {
+        status: "ongoing",
+        acceptedAt: admin.firestore.FieldValue.serverTimestamp()
+      };
+
+      const updated = await updateCall(callId, patch);
+
+      return res.json({ success: true, callId: updated.id, call: updated.data });
+    } catch (err) {
+      console.error("acceptCall error", err);
+      return res.status(500).json({ error: err.message || String(err) });
     }
-
-    const patch = {
-      status: "ongoing",
-      acceptedAt: admin.firestore.FieldValue.serverTimestamp()
-    };
-
-    const updated = await updateCall(callId, patch);
-
-    return res.json({ success: true, callId: updated.id, call: updated.data });
-  } catch (err) {
-    console.error("acceptCall error", err);
-    return res.status(500).json({ error: err.message || String(err) });
-  }
+  });
 });
 
 /**
@@ -90,6 +96,7 @@ exports.acceptCall = onRequest(async (req, res) => {
  * body: { callId, rejecterUid, reason? }
  */
 exports.rejectCall = onRequest(async (req, res) => {
+  cors(req, res, async () => {
   try {
     if (req.method !== "POST") return res.status(405).json({ error: "Only POST allowed" });
 
@@ -112,6 +119,7 @@ exports.rejectCall = onRequest(async (req, res) => {
     console.error("rejectCall error", err);
     return res.status(500).json({ error: err.message || String(err) });
   }
+  });
 });
 
 /**
@@ -119,6 +127,7 @@ exports.rejectCall = onRequest(async (req, res) => {
  * body: { callId, callType }   // callType: "audio" | "video"
  */
 exports.switchCallType = onRequest(async (req, res) => {
+  cors(req, res, async () => {
   try {
     if (req.method !== "POST") return res.status(405).json({ error: "Only POST allowed" });
 
@@ -146,6 +155,7 @@ exports.switchCallType = onRequest(async (req, res) => {
     console.error("switchCallType error", err);
     return res.status(500).json({ error: err.message || String(err) });
   }
+  });
 });
 
 /**
@@ -153,6 +163,7 @@ exports.switchCallType = onRequest(async (req, res) => {
  * body: { callId, userUid }
  */
 exports.markBusy = onRequest(async (req, res) => {
+  cors(req, res, async () => {
   try {
     if (req.method !== "POST") return res.status(405).json({ error: "Only POST allowed" });
 
@@ -174,6 +185,7 @@ exports.markBusy = onRequest(async (req, res) => {
     console.error("markBusy error", err);
     return res.status(500).json({ error: err.message || String(err) });
   }
+  });
 });
 
 /**
@@ -181,6 +193,7 @@ exports.markBusy = onRequest(async (req, res) => {
  * body: { callId, userUid }
  */
 exports.markMissed = onRequest(async (req, res) => {
+  cors(req, res, async () => {
   try {
     if (req.method !== "POST") return res.status(405).json({ error: "Only POST allowed" });
 
@@ -202,4 +215,5 @@ exports.markMissed = onRequest(async (req, res) => {
     console.error("markMissed error", err);
     return res.status(500).json({ error: err.message || String(err) });
   }
+  });
 });
