@@ -1,12 +1,15 @@
-// functions/src/call/call.controller.js
 const { onRequest } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
+const addCors = require("../utils/cors"); // <--- ADD THIS
+
 const { createCallDoc, endCallDoc, getCallDoc } = require("./call.service");
 
 if (!admin.apps.length) admin.initializeApp();
 
-// POST /createCall
+// ========================= CREATE CALL =========================
 exports.createCall = onRequest(async (req, res) => {
+  if (addCors(req, res)) return; // <--- ENABLE CORS
+
   try {
     if (req.method !== "POST") {
       return res.status(405).json({ error: "Only POST allowed" });
@@ -17,8 +20,7 @@ exports.createCall = onRequest(async (req, res) => {
       return res.status(400).json({ error: "creatorUid is required" });
     }
 
-    const channel =
-      channelName || `call_${Math.random().toString(36).slice(2, 9)}`;
+    const channel = channelName || `call_${Math.random().toString(36).slice(2, 9)}`;
 
     const result = await createCallDoc({
       channelName: channel,
@@ -34,8 +36,10 @@ exports.createCall = onRequest(async (req, res) => {
   }
 });
 
-// POST /endCall
+// ========================= END CALL =========================
 exports.endCall = onRequest(async (req, res) => {
+  if (addCors(req, res)) return; // <--- ENABLE CORS
+
   try {
     if (req.method !== "POST") {
       return res.status(405).json({ error: "Only POST allowed" });
@@ -54,8 +58,10 @@ exports.endCall = onRequest(async (req, res) => {
   }
 });
 
-// GET /getCall?callId=123
+// ========================= GET CALL =========================
 exports.getCall = onRequest(async (req, res) => {
+  if (addCors(req, res)) return; // <--- ENABLE CORS
+
   try {
     const callId = req.query.callId;
     if (!callId) {
