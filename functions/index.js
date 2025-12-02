@@ -1,13 +1,13 @@
 // functions/index.js
 
 // AUTH V2 HANDLERS
-exports.createAdmin = require("./src/auth/createAdmin");
+exports.createAdmin = require("./src/auth/admin/createAdmin");
 exports.resetPassword = require("./src/auth/resetPassword");
-exports.getAdminRole = require("./src/auth/getAdminRole");
+exports.getAdminRole = require("./src/auth/admin/getAdminRole");
 exports.getUserRole = require("./src/auth/getUserRole");
 exports.sendOtp = require("./src/auth/sendOtp");
 exports.verifyOtp = require("./src/auth/verifyOtp");
-exports.assignUserRole = require("./src/auth/assignUserRole");
+exports.assignUserRole = require("./src/auth/user/assignUserRole");
 exports.checkOnboardingStatus = require("./src/auth/checkOnboardingStatus");
 exports.registerUser = require("./src/auth/registerUser");
 exports.completeSignup = require("./src/auth/completeSignup");
