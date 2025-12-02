@@ -2,6 +2,8 @@
 
 const { onRequest } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
+const addCors = require("../utils/cors");
+
 if (!admin.apps.length) admin.initializeApp();
 
 const {
@@ -10,24 +12,19 @@ const {
   getCall
 } = require("./call.actions.service");
 
-/**
- * POST /initiateCall
- * body:
- * {
- *   "callerUid": "lawyer_001",
- *   "receiverUid": "user_123",
- *   "callType": "audio" | "video",     // optional, default audio
- *   "channelName": "optional_custom_channel"
- * }
- */
+// =============== initiateCall ===================
 exports.initiateCall = onRequest(async (req, res) => {
+  if (addCors(req, res)) return;
+
   try {
-    if (req.method !== "POST") return res.status(405).json({ error: "Only POST allowed" });
+    if (req.method !== "POST") {
+return res.status(405).json({ error: "Only POST allowed" });
+}
 
     const { callerUid, receiverUid, callType = "audio", channelName } = req.body || {};
     if (!callerUid || !receiverUid) {
-      return res.status(400).json({ error: "callerUid and receiverUid are required" });
-    }
+return res.status(400).json({ error: "callerUid and receiverUid are required" });
+}
 
     const ch = channelName || `call_${Math.random().toString(36).slice(2, 9)}`;
 
@@ -39,167 +36,169 @@ exports.initiateCall = onRequest(async (req, res) => {
       participants: [callerUid, receiverUid]
     });
 
-    return res.json({
-      success: true,
-      callId: created.id,
-      call: created.data
-    });
+    return res.json({ success: true, callId: created.id, call: created.data });
   } catch (err) {
     console.error("initiateCall error", err);
-    return res.status(500).json({ error: err.message || String(err) });
+    return res.status(500).json({ error: err.message });
   }
 });
 
-/**
- * POST /acceptCall
- * body: { callId, accepterUid }
- */
+// =============== acceptCall ===================
 exports.acceptCall = onRequest(async (req, res) => {
+  if (addCors(req, res)) return;
+
   try {
-    if (req.method !== "POST") return res.status(405).json({ error: "Only POST allowed" });
+    if (req.method !== "POST") {
+return res.status(405).json({ error: "Only POST allowed" });
+}
 
     const { callId, accepterUid } = req.body || {};
-    if (!callId || !accepterUid) return res.status(400).json({ error: "callId and accepterUid required" });
+    if (!callId || !accepterUid) {
+return res.status(400).json({ error: "callId and accepterUid required" });
+}
 
     const existing = await getCall(callId);
-    if (!existing) return res.status(404).json({ error: "Call not found" });
+    if (!existing) {
+return res.status(404).json({ error: "Call not found" });
+}
 
-    // Only allow accepting from the receiver (or allow caller to accept for testing)
-    if (existing.data.receiverUid && existing.data.receiverUid !== accepterUid && existing.data.callerUid !== accepterUid) {
-      // allow caller for special flows, otherwise require receiver to accept
-      // you can tweak this policy as needed
-      return res.status(403).json({ error: "Only receiver or caller can accept the call" });
+    if (
+      existing.data.receiverUid !== accepterUid &&
+      existing.data.callerUid !== accepterUid
+    ) {
+      return res.status(403).json({ error: "Only caller/receiver can accept" });
     }
 
-    const patch = {
+    const updated = await updateCall(callId, {
       status: "ongoing",
       acceptedAt: admin.firestore.FieldValue.serverTimestamp()
-    };
-
-    const updated = await updateCall(callId, patch);
+    });
 
     return res.json({ success: true, callId: updated.id, call: updated.data });
   } catch (err) {
     console.error("acceptCall error", err);
-    return res.status(500).json({ error: err.message || String(err) });
+    return res.status(500).json({ error: err.message });
   }
 });
 
-/**
- * POST /rejectCall
- * body: { callId, rejecterUid, reason? }
- */
+// =============== rejectCall ===================
 exports.rejectCall = onRequest(async (req, res) => {
+  if (addCors(req, res)) return;
+
   try {
-    if (req.method !== "POST") return res.status(405).json({ error: "Only POST allowed" });
+    if (req.method !== "POST") {
+return res.status(405).json({ error: "Only POST allowed" });
+}
 
     const { callId, rejecterUid, reason } = req.body || {};
-    if (!callId || !rejecterUid) return res.status(400).json({ error: "callId and rejecterUid required" });
+    if (!callId || !rejecterUid) {
+return res.status(400).json({ error: "callId and rejecterUid required" });
+}
 
     const existing = await getCall(callId);
-    if (!existing) return res.status(404).json({ error: "Call not found" });
+    if (!existing) {
+return res.status(404).json({ error: "Call not found" });
+}
 
-    const patch = {
+    const updated = await updateCall(callId, {
       status: "rejected",
       rejectedAt: admin.firestore.FieldValue.serverTimestamp(),
       rejecterUid,
       rejectReason: reason || null
-    };
+    });
 
-    const updated = await updateCall(callId, patch);
     return res.json({ success: true, callId: updated.id, call: updated.data });
   } catch (err) {
     console.error("rejectCall error", err);
-    return res.status(500).json({ error: err.message || String(err) });
+    return res.status(500).json({ error: err.message });
   }
 });
 
-/**
- * POST /switchCallType
- * body: { callId, callType }   // callType: "audio" | "video"
- */
+// =============== switchCallType ===================
 exports.switchCallType = onRequest(async (req, res) => {
+  if (addCors(req, res)) return;
+
   try {
-    if (req.method !== "POST") return res.status(405).json({ error: "Only POST allowed" });
+    if (req.method !== "POST") {
+return res.status(405).json({ error: "Only POST allowed" });
+}
 
     const { callId, callType } = req.body || {};
-    if (!callId || !callType) return res.status(400).json({ error: "callId and callType required" });
-    if (!["audio", "video"].includes(callType)) return res.status(400).json({ error: "callType must be 'audio' or 'video'" });
+    if (!callId || !callType) {
+return res.status(400).json({ error: "callId and callType required" });
+}
+
+    if (!["audio", "video"].includes(callType)) {
+return res.status(400).json({ error: "callType must be 'audio' or 'video'" });
+}
 
     const existing = await getCall(callId);
-    if (!existing) return res.status(404).json({ error: "Call not found" });
+    if (!existing) {
+return res.status(404).json({ error: "Call not found" });
+}
 
-    // Only allow switching when ongoing or ringing -> allow switch in ringing to let caller request video
-    const allowedStatuses = ["ongoing", "ringing"];
-    if (!allowedStatuses.includes(existing.data.status)) {
-      return res.status(409).json({ error: `Cannot switch call type when status is ${existing.data.status}` });
-    }
-
-    const patch = {
+    const updated = await updateCall(callId, {
       callType,
       callTypeChangedAt: admin.firestore.FieldValue.serverTimestamp()
-    };
+    });
 
-    const updated = await updateCall(callId, patch);
     return res.json({ success: true, callId: updated.id, call: updated.data });
   } catch (err) {
     console.error("switchCallType error", err);
-    return res.status(500).json({ error: err.message || String(err) });
+    return res.status(500).json({ error: err.message });
   }
 });
 
-/**
- * POST /markBusy
- * body: { callId, userUid }
- */
+// =============== markBusy ===================
 exports.markBusy = onRequest(async (req, res) => {
+  if (addCors(req, res)) return;
+
   try {
-    if (req.method !== "POST") return res.status(405).json({ error: "Only POST allowed" });
+    if (req.method !== "POST") {
+return res.status(405).json({ error: "Only POST allowed" });
+}
 
     const { callId, userUid } = req.body || {};
-    if (!callId || !userUid) return res.status(400).json({ error: "callId and userUid required" });
+    if (!callId || !userUid) {
+return res.status(400).json({ error: "callId and userUid required" });
+}
 
-    const existing = await getCall(callId);
-    if (!existing) return res.status(404).json({ error: "Call not found" });
-
-    const patch = {
+    const updated = await updateCall(callId, {
       status: "busy",
       busyBy: userUid,
       busyAt: admin.firestore.FieldValue.serverTimestamp()
-    };
+    });
 
-    const updated = await updateCall(callId, patch);
     return res.json({ success: true, callId: updated.id, call: updated.data });
   } catch (err) {
     console.error("markBusy error", err);
-    return res.status(500).json({ error: err.message || String(err) });
+    return res.status(500).json({ error: err.message });
   }
 });
 
-/**
- * POST /markMissed
- * body: { callId, userUid }
- */
+// =============== markMissed ===================
 exports.markMissed = onRequest(async (req, res) => {
+  if (addCors(req, res)) return;
+
   try {
-    if (req.method !== "POST") return res.status(405).json({ error: "Only POST allowed" });
+    if (req.method !== "POST") {
+return res.status(405).json({ error: "Only POST allowed" });
+}
 
     const { callId, userUid } = req.body || {};
-    if (!callId || !userUid) return res.status(400).json({ error: "callId and userUid required" });
+    if (!callId || !userUid) {
+return res.status(400).json({ error: "callId and userUid required" });
+}
 
-    const existing = await getCall(callId);
-    if (!existing) return res.status(404).json({ error: "Call not found" });
-
-    const patch = {
+    const updated = await updateCall(callId, {
       status: "missed",
       missedBy: userUid,
       missedAt: admin.firestore.FieldValue.serverTimestamp()
-    };
+    });
 
-    const updated = await updateCall(callId, patch);
     return res.json({ success: true, callId: updated.id, call: updated.data });
   } catch (err) {
     console.error("markMissed error", err);
-    return res.status(500).json({ error: err.message || String(err) });
+    return res.status(500).json({ error: err.message });
   }
 });
